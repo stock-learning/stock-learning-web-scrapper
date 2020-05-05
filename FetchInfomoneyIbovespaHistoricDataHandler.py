@@ -124,8 +124,8 @@ class FetchInfomoneyIbovespaHistoricDataHandler(object):
             message = { 'stockData': [] }
             i = 0
             for row in csv_reader:
-                if i is not 0:
-                    if len(message['stockData']) is 50:
+                if i != 0:
+                    if len(message['stockData']) == 50:
                         self.api_stub.persist_infomoney_ibovespa_historic_data(message)
                         message['stockData'] = []
                     message['stockData'].append({
