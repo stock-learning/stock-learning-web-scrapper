@@ -1,15 +1,14 @@
-from stock_learning_rabbitmq.RabbitMQ import RabbitMQ
-from FetchInfomoneyIbovespaHistoricDataHandler import FetchInfomoneyIbovespaHistoricDataHandler
 from stock_learning_rabbitmq.ApiStub import ApiStub
+from stock_learning_rabbitmq.RabbitMQServer import RabbitMQServer
 
+from InfomoneyIbovespaInitialLoad import InfomoneyIbovespaInitialLoad
+from InfomoneyIbovespaLiveUpdate import InfomoneyIbovespaLiveUpdate
 
-server = RabbitMQ('stock-learning-web-scrapper', 'localhost')
+server = RabbitMQServer('stock-learning-web-scrapper', 'localhost')
 api_stub = ApiStub(server)
 
-teste = FetchInfomoneyIbovespaHistoricDataHandler(server, api_stub)
+server.register(InfomoneyIbovespaInitialLoad(server, api_stub))
+server.register(InfomoneyIbovespaLiveUpdate(server, api_stub))
 
-server.register(teste)
-
-teste.consume({})
-
+server.disable_heartbeat()
 server.start_listening()
