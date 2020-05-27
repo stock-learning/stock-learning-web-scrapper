@@ -6,6 +6,7 @@
 
 
 ### Depndeências do projeto
-pip install selenium
-pip install stock-learing-rabbitmq
+O projeto possui as seguintes dependencias, basta rodar o comando abaixo para instala-las
+- `pip install selenium`
+- `pip install stock-learing-rabbitmq`
 
