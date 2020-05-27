@@ -11,27 +11,31 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-import CompanyData as cd
 import DateUtils as du
 import Decorators as dc
 import FileUtils as fu
 
 
-class InfomoneyIbovespaInitialLoad(object):
+class InfomoneyIbovespaHistoricData(object):
     def __init__(self, server, api_stub):
         self.server = server
-        self.primitive_name = 'infomoney-ibovespa-initial-load'
+        self.primitive_name = 'infomoney-ibovespa-historic-data'
         self.api_stub = api_stub
 
     def consume(self, message):
-        # creates the initial_load directory if it does not exist
-        initial_load_dir = os.path.join(os.path.dirname(__file__), 'initial_load')
-        if not os.path.isdir(initial_load_dir):
-            os.mkdir(initial_load_dir)
 
-        # creates a id for the request and makes a folder inside of initial_load for it
+        # TODO - refatorar
+        if 'stock_data' not in message:
+            return None
+
+        # creates the historic_data directory if it does not exist
+        historic_data_dir = os.path.join(os.path.dirname(__file__), 'historic_data')
+        if not os.path.isdir(historic_data_dir):
+            os.mkdir(historic_data_dir)
+
+        # creates a id for the request and makes a folder inside of historic_data for it
         request_id = uuid.uuid4().__str__()
-        download_dir = os.path.join(initial_load_dir, request_id)
+        download_dir = os.path.join(historic_data_dir, request_id)
         os.mkdir(download_dir)
         
         # initializes the chrome driver with the requires window size and position
@@ -39,16 +43,13 @@ class InfomoneyIbovespaInitialLoad(object):
         driver.set_window_size(1080, 2500)
         driver.set_window_position(100, 0)
         
-        # uses the drive to fetch all the companies available for web scrapping
-        collected_data = cd.fetch_company_data_from_ibovespa_page(driver)
-        
         # configures the download directory in which all files will be downloaded
         driver.command_executor._commands["send_command"] = ("POST", '/session/$sessionId/chromium/send_command')
         params = {'cmd':'Page.setDownloadBehavior', 'params': { 'behavior': 'allow', 'downloadPath': download_dir }}
         driver.execute("send_command", params)
         
         # iterates through all the collected companies retrieving it's historic data
-        for stock_data in collected_data:
+        for stock_data in message['stock_data']:
 
             # tries up to 10 times to donwload csv
             self.download_historic_data(driver, stock_data)
@@ -61,7 +62,7 @@ class InfomoneyIbovespaInitialLoad(object):
                 # builds a message to send to the API
                 message = self.build_api_message_from_file_and_stock_data(fu.get_only_filename_in_directory(download_dir), stock_data)
                 # actually send the message to the API
-                self.api_stub.infomoney_ibovespa_initial_load(message)
+                self.api_stub.infomoney_ibovespa_historic_data(message)
                 # deletes the downloaded file
                 os.remove(fu.get_only_filename_in_directory(download_dir))
             
@@ -72,7 +73,7 @@ class InfomoneyIbovespaInitialLoad(object):
 
     @dc.retry(times=10, iter_message='{3} try number {0}', except_message='Error fetching data of {2}')
     def download_historic_data(self, driver, stock_data):
-        driver.get(stock_data.link)
+        driver.get(stock_data['link'])
         
         # all of the xpaths used in this method
         download_file_xpath = '//*[@id="quotes_history_wrapper"]/div/button'
@@ -116,9 +117,13 @@ class InfomoneyIbovespaInitialLoad(object):
         with open(downloaded_file_path, encoding='utf8') as f:
             csv_reader = csv.reader(f, delimiter=',')
             message = { 'stockData': [] }
+            first = True
             for row in csv_reader:
+                if first:
+                    first = False
+                    continue
                 message['stockData'].append({
-                    'name': stock_data.name,
+                    'name': stock_data['name'],
                     'date': row[0],
                     'open': row[1],
                     'close': row[2],
