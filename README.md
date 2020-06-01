@@ -1,12 +1,9 @@
 # StockLearningWebScrapper
 
+### Chorme driver
+This project requires the chorme driver executable in located in the same folder as the project itself. You can download it using this [link](https://chromedriver.chromium.org/downloads), note that you need to download the same version of the chorme as driver as the google chrome installed in your machine
 
-### Para rodar o projeto, é necessário ter o Chrome Driver localizado na pasta raiz do projeto.
-[link para download](https://chromedriver.chromium.org/downloads)
-
-
-### Depndeências do projeto
-O projeto possui as seguintes dependencias, basta rodar o comando abaixo para instala-las
+### Dependencies
+You need to run the following commands to install the dependencies required to run this project.
 - `pip install selenium`
 - `pip install stock-learing-rabbitmq`
-

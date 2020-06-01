@@ -24,56 +24,54 @@ class InfomoneyIbovespaHistoricData(object):
 
     def consume(self, message):
 
-        # TODO - refatorar
-        if 'stock_data' not in message:
-            return None
-
-        # creates the historic_data directory if it does not exist
-        historic_data_dir = os.path.join(os.path.dirname(__file__), 'historic_data')
-        if not os.path.isdir(historic_data_dir):
-            os.mkdir(historic_data_dir)
-
-        # creates a id for the request and makes a folder inside of historic_data for it
-        request_id = uuid.uuid4().__str__()
-        download_dir = os.path.join(historic_data_dir, request_id)
-        os.mkdir(download_dir)
-        
-        # initializes the chrome driver with the requires window size and position
-        driver = webdriver.Chrome(executable_path='chromedriver.exe')
-        driver.set_window_size(1080, 2500)
-        driver.set_window_position(100, 0)
-        
-        # configures the download directory in which all files will be downloaded
-        driver.command_executor._commands["send_command"] = ("POST", '/session/$sessionId/chromium/send_command')
-        params = {'cmd':'Page.setDownloadBehavior', 'params': { 'behavior': 'allow', 'downloadPath': download_dir }}
-        driver.execute("send_command", params)
-        
-        # iterates through all the collected companies retrieving it's historic data
-        for stock_data in message['stock_data']:
-
-            # tries up to 10 times to donwload csv
-            self.download_historic_data(driver, stock_data)
-            # waits 5 seconds for download to finish (we could use some kind callback for when the downloaded file appears)
-            time.sleep(5)
-
-            # if the download occours successfuly, we build a message with that file, send to the API and delete it
-            if fu.directory_has_file(download_dir):
-
-                # builds a message to send to the API
-                message = self.build_api_message_from_file_and_stock_data(fu.get_only_filename_in_directory(download_dir), stock_data)
-                # actually send the message to the API
-                self.api_stub.infomoney_ibovespa_historic_data(message)
-                # deletes the downloaded file
-                os.remove(fu.get_only_filename_in_directory(download_dir))
+        if 'initials' in message and len(message['initials']) > 0:
             
-        # closes the chrome driver and removes the directory created for this request        
-        driver.quit()
-        os.rmdir(download_dir)
+            # creates the historic_data directory if it does not exist
+            historic_data_dir = os.path.join(os.path.dirname(__file__), 'historic_data')
+            if not os.path.isdir(historic_data_dir):
+                os.mkdir(historic_data_dir)
+
+            # creates a id for the request and makes a folder inside of historic_data for it
+            request_id = uuid.uuid4().__str__()
+            download_dir = os.path.join(historic_data_dir, request_id)
+            os.mkdir(download_dir)
+            
+            # initializes the chrome driver with the requires window size and position
+            driver = webdriver.Chrome(executable_path='chromedriver.exe')
+            driver.set_window_size(1080, 2500)
+            driver.set_window_position(100, 0)
+            
+            # configures the download directory in which all files will be downloaded
+            driver.command_executor._commands["send_command"] = ("POST", '/session/$sessionId/chromium/send_command')
+            params = {'cmd':'Page.setDownloadBehavior', 'params': { 'behavior': 'allow', 'downloadPath': download_dir }}
+            driver.execute("send_command", params)
+            
+            # iterates through all the collected companies retrieving it's historic data
+            for initials in message['initials']:
+
+                # tries up to 10 times to donwload csv
+                self.download_historic_data(driver, f'https://www.infomoney.com.br/{initials}')
+                # waits 5 seconds for download to finish (we could use some kind callback for when the downloaded file appears)
+                time.sleep(5)
+
+                # if the download occours successfuly, we build a message with that file, send to the API and delete it
+                if fu.directory_has_file(download_dir):
+
+                    # builds a message to send to the API
+                    message = self.build_api_message_from_file_and_stock_data(fu.get_only_filename_in_directory(download_dir), initials)
+                    # actually send the message to the API
+                    self.api_stub.infomoney_ibovespa_historic_data(message)
+                    # deletes the downloaded file
+                    os.remove(fu.get_only_filename_in_directory(download_dir))
+                
+            # closes the chrome driver and removes the directory created for this request        
+            driver.quit()
+            os.rmdir(download_dir)
 
 
     @dc.retry(times=10, iter_message='{3} try number {0}', except_message='Error fetching data of {2}')
-    def download_historic_data(self, driver, stock_data):
-        driver.get(stock_data['link'])
+    def download_historic_data(self, driver, link):
+        driver.get(link)
         
         # all of the xpaths used in this method
         download_file_xpath = '//*[@id="quotes_history_wrapper"]/div/button'
@@ -113,7 +111,7 @@ class InfomoneyIbovespaHistoricData(object):
         # clicks the download file button
         download_file_element.click()
 
-    def build_api_message_from_file_and_stock_data(self, downloaded_file_path, stock_data):
+    def build_api_message_from_file_and_stock_data(self, downloaded_file_path, initials):
         with open(downloaded_file_path, encoding='utf8') as f:
             csv_reader = csv.reader(f, delimiter=',')
             message = { 'stockData': [] }
@@ -123,7 +121,7 @@ class InfomoneyIbovespaHistoricData(object):
                     first = False
                     continue
                 message['stockData'].append({
-                    'name': stock_data['name'],
+                    'name': initials,
                     'date': row[0],
                     'open': row[1],
                     'close': row[2],

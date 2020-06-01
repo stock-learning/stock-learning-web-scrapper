@@ -30,8 +30,8 @@ class InfomoneyIbovespaCompanyData(object):
 
         data_collected = []
 
-        data_collected.extend(_find_companies_data(driver, tbbody_high_xpath))
-        data_collected.extend(_find_companies_data(driver, tbbody_low_xpath))
+        data_collected.extend(self._find_companies_data(driver, tbbody_high_xpath))
+        data_collected.extend(self._find_companies_data(driver, tbbody_low_xpath))
 
         company_data = []
 
@@ -43,25 +43,27 @@ class InfomoneyIbovespaCompanyData(object):
 
         for stock_data in data_collected:
             
-            driver.get(stock_data['link'])
-            
-            initials = driver.find_element_by_xpath(initials_xpath).text
-            name = re.compile('\\s{2}\\s*').split(driver.find_element_by_xpath(stock_title_xpath).text)[0]
-            company_type = driver.find_element_by_xpath(company_type_xpath).text
-            sector = driver.find_element_by_xpath(sector_xpath).text
-            description = su.remove_html(driver.find_element_by_xpath(description_xpath).text)
+            try:
+                driver.get(stock_data['link'])
+                
+                initials = driver.find_element_by_xpath(initials_xpath).text
+                name = re.compile('\\s*\\(').split(driver.find_element_by_xpath(stock_title_xpath).text)[0]
+                company_type = driver.find_element_by_xpath(company_type_xpath).text
+                sector = driver.find_element_by_xpath(sector_xpath).text
+                description = su.remove_html(driver.find_element_by_xpath(description_xpath).text)
 
-            company_data.append({
-                'initials': initials,
-                'name': name,
-                'infomoneyUrl': stock_data['link'],
-                'type': company_type,
-                'sector': sector,
-                'description': description,
-            })
+                company_data.append({
+                    'initials': initials,
+                    'name': name,
+                    'type': company_type,
+                    'sector': sector,
+                    'description': description,
+                })
+            except Exception as e:
+                print(f'An exception occoured when trying to fetch company data for {stock_data}. {e}')
 
         driver.quit()
-        api_stub.infomoney_ibovespa_company_data(company_data)
+        self.api_stub.infomoney_ibovespa_company_data({ 'companyData': company_data })
         
 
 
