@@ -6,4 +6,4 @@ This project requires the chorme driver executable in located in the same folder
 ### Dependencies
 You need to run the following commands to install the dependencies required to run this project.
 - `pip install selenium`
-- `pip install stock-learing-rabbitmq`
+- `pip install stock-learning-rabbitmq`
