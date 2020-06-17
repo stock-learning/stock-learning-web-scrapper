@@ -29,7 +29,7 @@ class InfomoneyIbovespaLiveUpdate(object):
 
             live_updates = []
 
-            previous_closing_xpath = '//*[@id="header-quotes"]/div[1]/table[1]/tbody/tr[1]/td[2]'
+            close_xpath = '//*[@id="header-quotes"]/div[1]/table[1]/tbody/tr[1]/td[2]'
             open_xpath = '//*[@id="header-quotes"]/div[1]/table[1]/tbody/tr[2]/td[2]'
             business_xpath = '//*[@id="header-quotes"]/div[1]/table[1]/tbody/tr[3]/td[2]'
             quantity_xpath = '//*[@id="header-quotes"]/div[1]/table[1]/tbody/tr[4]/td[2]'
@@ -48,7 +48,7 @@ class InfomoneyIbovespaLiveUpdate(object):
                     live_updates.append({
                         'name': initials,
                         'fetchTime': datetime.datetime.now().__str__(),
-                        'previousClosing': driver.find_element_by_xpath(previous_closing_xpath).text,
+                        'close': driver.find_element_by_xpath(close_xpath).text,
                         'open': driver.find_element_by_xpath(open_xpath).text,
                         'business': driver.find_element_by_xpath(business_xpath).text,
                         'quantity': driver.find_element_by_xpath(quantity_xpath).text,
